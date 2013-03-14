@@ -5,21 +5,18 @@
 package com.vegas.interview.packagemaker;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.Queue;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.StringTokenizer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -51,38 +48,97 @@ public class ComVegasInterviewPackageMaker {
    final static String PACKAGE="PACKAGE";
     
     public static void main(String[] args) {
+        MergeSort sort = new MergeSort();
         
         if (args.length != 5){
             System.out.println("You do not have the right number of arguments.");
             System.exit(1);
         } else if(!validate(args)) { // validate is a workhorse function that makes sure that user input is accurate
-            System.out.println("Your command is not valid.");
+            System.out.println("Could not process. Your command is not valid.");
             System.exit(1);
         }
+        // If our file has the wrong format, packstructure will let us know
+        if(packStructures()){// Pack Hotels, Shows, Tours   
+            packageMaker();     // Makes packages 
+            Packages = sort.sortByColumn(Packages,order);   //Sorts our packages
+            writeToFile();      // Write to our file
+        }
         
-        packStructures();
+        System.setOut(consoleStream); //Since my System.out is printing to the file rather than console, I need to redirect it back
         
-        readFile.close();
+        try{
+            readFile.close();   // We don't need our file reader anymore
+            fos.close();        // We need to save and close out the file
+            writeFile.close();
+        } catch(IllegalStateException ex){   // Error handling. 
+            System.out.println("Couldn't close file.");
+        } catch(IOException ex){
+            System.out.println("Couldn't close file output stream.");
+        }
+        
+        
+    }
+    
+    private static void writeToFile(){
         
         String printM;
         int index_p = 0;
-        
         /*
-         * These for loops are used to make our packages.
-         * Since our packages consists of ..
-         * Package Price : Hotel Id : Hotel Price : Show Id : Show Price : Ticket Id : Ticket Price
-         * We use an arraylist that can hold a Numbers[] object.
-         * This allows us to type cast to the child classes later, yaaay for polymorphism!
+         * I was having problems with display my doubles since they go out so far. Honestly speaking, floats would
+         * have been more appropriate however, when tackling this problem I initially used doubles. I simply solved
+         * the problem of display when using DecimalFormat object. Sorry for wasting space.
          */
         
-        for(int i = 0; i < Hotels.size();i++){
+        DecimalFormat df = new DecimalFormat("#####.00");
+        for(index_p = 0; index_p < Packages.size(); index_p ++){
+            
+            /*
+             * Here we need to print our to the file. I am use the same format as you specified in the problem.
+             * I use 3 boolean variables to tell the program which column to display.
+             * displayHote, displayShow, and displayTour all tell the computer what to display.
+             */
+            
+            if((Packages.get(index_p)[0].doubleValue() >= (double)minPackagePrice - .001) && (Packages.get(index_p)[0].doubleValue() <= (double)maxPackagePrice + .001)){
+                printM = "PACKAGE\t" + df.format(Packages.get(index_p)[0]) + "\t";
+                if(displayHotel){
+                    printM += "Hotels\t"+ Packages.get(index_p)[1] + "\t"+ df.format(Packages.get(index_p)[2]) +"\t";
+                }else{
+                    printM +="\t\t\t\t\t"; // If column is not to be included
+                }
+                if(displayShow){
+                    printM += "Shows\t"+ Packages.get(index_p)[3] + "\t"+ df.format(Packages.get(index_p)[4]) + "\t";
+                }else{
+                    printM +="\t\t\t\t\t";
+                }
+                if(displayTour){
+                    printM += "Tours\t"+ Packages.get(index_p)[5] + "\t"+ df.format(Packages.get(index_p)[6]);
+                }else{
+                    printM +="\t\t\t\t\t";
+                }
+                System.out.println(printM);
+            }
+        }
+    }
+    
+    private static void packageMaker(){ // Creates our packages
+        
+   /*
+    * These for loops are used to make our packages.
+    * Since our packages consists of ..
+    * Package Price : Hotel Id : Hotel Price : Show Id : Show Price : Ticket Id : Ticket Price
+    * We use an arraylist that can hold a Numbers[] object.
+    * This allows us to type cast to the child classes later, yaaay for polymorphism!
+    */
+        
+        int index_p = 0;
+           for(int i = 0; i < Hotels.size();i++){
             for(int j = 0; j < Shows.size(); j++){
                 for(int k = 0; k < Tours.size(); k ++){
                     
                     // We need to add a new number object to our Package arraylist
                     
                     Packages.add(new Number[7]);
-                    
+                                       
                     if(displayHotel){
                         Packages.get(index_p)[0] = (double)Hotels.get(i)[1];
                         Packages.get(index_p)[1] = Hotels.get(i)[0]; // This is the id of the hotel
@@ -107,7 +163,6 @@ public class ComVegasInterviewPackageMaker {
                         }else{
                             Packages.get(index_p)[0] = (double)Tours.get(k)[1];
                         }
-                        Packages.get(index_p)[0] = Packages.get(index_p)[0].doubleValue() + (double)Tours.get(k)[1];
                         Packages.get(index_p)[5] = Tours.get(k)[0];  // This is the id of the tour
                         Packages.get(index_p)[6] = Tours.get(k)[1];  // This is the price for ticket
                     }else{
@@ -119,129 +174,6 @@ public class ComVegasInterviewPackageMaker {
             }
 
         }
-        
-        /*
-         * sortByColumn() does exactly what it sounds like. It takes in my Package arraylists
-         * and then it begins to sort the packages by priority of columns. A column that is sorted first
-         * cannot be scrambled. We then to group or block out parts of the column that was sorted.
-         */
-        
-        sortByColumn();
-        
-        /*
-         * I was having problems with display my doubles since they go out so far. Honestly speaking, floats would
-         * have been more appropriate however, when tackling this problem I initially used doubles. I simply solved
-         * the problem of display when using DecimalFormat object. Sorry for wasting space.
-         */
-        
-        DecimalFormat df = new DecimalFormat("#####.00");
-        for(index_p = 0; index_p < Packages.size(); index_p ++){
-            
-            /*
-             * Here we need to print our to the file. I am use the same format as you specified in the problem.
-             * I use 3 boolean variables to tell the program which column to display.
-             * displayHote, displayShow, and displayTour all tell the computer what to display.
-             */
-            
-            if((Packages.get(index_p)[0].doubleValue() >= minPackagePrice) && (Packages.get(index_p)[0].doubleValue() <= maxPackagePrice)){
-                printM = "PACKAGE\t" + df.format(Packages.get(index_p)[0]) + "\t";
-                if(displayHotel){
-                    printM += "Hotels\t"+ Packages.get(index_p)[1] + "\t"+ df.format(Packages.get(index_p)[2]) +"\t";
-                }else{
-                    printM +="\t\t\t\t\t";
-                }
-                if(displayShow){
-                    printM += "Shows\t"+ Packages.get(index_p)[3] + "\t"+ df.format(Packages.get(index_p)[4]) + "\t";
-                }else{
-                    printM +="\t\t\t\t\t";
-                }
-                if(displayTour){
-                    printM += "Tours\t"+ Packages.get(index_p)[5] + "\t"+ df.format(Packages.get(index_p)[6]);
-                }else{
-                    printM +="\t\t\t\t\t";
-                }
-                System.out.println(printM);
-            }
-        }
-        
-        try{
-            fos.close(); // We need to save and close out the file
-            writeFile.close();
-        } catch(Exception e){ // Error handling. 
-            System.setOut(consoleStream); //Since my System.out is printing to the file rather than console, I need to redirect it back
-            System.out.println("Couldn't close file.");
-        }
-        
-    }
-    
-    private static void sortByColumn(){
-        
-        /*
-         * The way this function works is that it uses two values.
-         * operation and groupOperator.
-         * operation refers to the current column that we are trying to sort.
-         * groupOperator refers to the column we want to constrain.
-         * Given the two operators, which sort by priority.
-         */
-        
-        char operation;
-        char groupOperator = '\0'; // This groupOperator is used to keep track of the last colomn sorted
-        
-        MergeSort sortObject = new MergeSort(); // I thought mergesort was a fairly appropriate sort for this problem
-        
-        /*
-         * Cool this about MergeSorts is that they can be optimized to compute in parallel.
-         */
-        
-        /*
-         * Our order object is actually a queue. This was the most appropriate structure to use
-         * since we are sorting FIFO.
-         */
-        
-        while(order.peek() != null){
-            operation = order.remove();
-            switch (operation){
-                case'p':
-                    if(groupOperator == '\0'){ // If groupOperator is this, we need not contstrain any columns.
-                        Packages = sortObject.sort(Packages, 0);
-                        groupOperator = 'p';
-                    } else {
-                        // orderGrpCol() is a function that allows us to sort with constrained columns
-                        // the groupOperator tells the function which column we are constraining while the
-                        // 'p' literal tells us which column we want to sort.
-                        orderGrpCol(groupOperator,'p');
-                        groupOperator = 'p';
-                    }
-                    break;
-                case'h':
-                    if(groupOperator == '\0'){
-                        Packages = sortObject.sort(Packages, 2);
-                        groupOperator = 'h';
-                    } else {
-                        orderGrpCol(groupOperator,'h');
-                        groupOperator = 'h';
-                    }
-                    break;
-                case's':
-                    if(groupOperator == '\0'){
-                        Packages = sortObject.sort(Packages, 4);
-                        groupOperator = 's';
-                    } else {
-                        orderGrpCol(groupOperator,'s');
-                        groupOperator = 's';
-                    }
-                    break;
-                case't':
-                    if(groupOperator == '\0'){
-                        Packages = sortObject.sort(Packages, 6);
-                        groupOperator = 't';
-                    } else {
-                        orderGrpCol(groupOperator,'t');
-                        groupOperator = 't';
-                    }
-                    break;
-            }
-        }
     }
     
     /*
@@ -252,8 +184,9 @@ public class ComVegasInterviewPackageMaker {
      * Item Id : Item Price
      */
     
-    private static void packStructures(){
+    private static boolean packStructures(){
         // We want to process each line of data, processLine helps us
+
         String processLine;
         int h_index = 0,s_index = 0,t_index = 0;
         
@@ -270,28 +203,51 @@ public class ComVegasInterviewPackageMaker {
                 Hotels.add(new Number[2]);
                 parser = new StringTokenizer(processLine,"\t ");
                 parser.nextToken();
-                Hotels.get(h_index)[0] = Integer.parseInt(parser.nextToken());  // Pack our ID
-                Hotels.get(h_index)[1] = Double.parseDouble(parser.nextToken());// Pack our Price
+                try{
+                    Hotels.get(h_index)[0] = Integer.parseInt(parser.nextToken());  // Pack our ID
+                    Hotels.get(h_index)[1] = Double.parseDouble(parser.nextToken());// Pack our Price
+                }catch(Exception ex){ // This will generalize to some problem associated with the file format
+                    System.setOut(consoleStream);
+                    System.out.println("Your file does not have the right format.");
+                    return false;
+                }
                 h_index ++;
             }
            else if(processLine.contains("SHOW")){
                 Shows.add(new Number[2]);
                 parser = new StringTokenizer(processLine,"\t ");
                 parser.nextToken();
+                try{
                 Shows.get(s_index)[0] = Integer.parseInt(parser.nextToken());   // Pack our ID
                 Shows.get(s_index)[1] = Double.parseDouble(parser.nextToken()); // Pack our Price
+                } catch(Exception ex){
+                    System.setOut(consoleStream);
+                    System.out.println("Your file does not have the right format.");
+                    return false;                
+                }
                 s_index ++;
             }
             else if(processLine.contains("TOUR")){
+                try{
                 Tours.add(new Number[2]);
                 parser = new StringTokenizer(processLine,"\t ");
                 parser.nextToken();
                 Tours.get(t_index)[0] = Integer.parseInt(parser.nextToken());   // Pack our ID
                 Tours.get(t_index)[1] = Double.parseDouble(parser.nextToken()); // Pack our Price
+                } catch(Exception ex){
+                    System.setOut(consoleStream);
+                    System.out.println("Your file does not have the right format.");
+                    return false;                
+                }
                 t_index ++;
+            } else {
+                System.setOut(consoleStream);
+                System.out.println("Your file does not have the right format.");
+                return false;
             }
           
-        } 
+        }
+         return true; // If we made it out of the while loop then everything went well
     }
 
     /*
@@ -324,9 +280,16 @@ public class ComVegasInterviewPackageMaker {
             minPackagePrice = Integer.parseInt(args[1]);
             maxPackagePrice = Integer.parseInt(args[2]);
             
-        } catch (Exception ex) {
-            Logger.getLogger(ComVegasInterviewPackageMaker.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (FileNotFoundException ex) {
+            System.setOut(consoleStream);
+            System.out.println("Could Not Find File");
             flag = false;
+        } catch (SecurityException ex){
+            System.setOut(consoleStream);
+            System.out.println("Security Exception Thrown.");
+        } catch (NumberFormatException ex){
+            System.setOut(consoleStream);
+            System.out.println("Your input parameter is not an integer.");
         }
         
         //Incase the user mixed up the package price order
@@ -334,6 +297,12 @@ public class ComVegasInterviewPackageMaker {
             swap = minPackagePrice;
             minPackagePrice = maxPackagePrice;
             maxPackagePrice = swap;
+        }
+        
+        if(minPackagePrice == maxPackagePrice){
+            System.setOut(consoleStream);
+            System.out.println("You cannot make minPackagePrice == maxPackagePrice");
+            flag = false;
         }
         
         parameters = args[3];
@@ -349,14 +318,16 @@ public class ComVegasInterviewPackageMaker {
                 switch(readChar = parameters.charAt(index)){
                 
                     case 'p':
-                        if(!unique.add(readChar)){ // We use a set to flag duplicates
+                        if(!unique.add(readChar)){  // We use a set to flag duplicates
+                            System.setOut(consoleStream);
                             System.out.println("Duplicate order parameters. Cannot process");
-                            flag = false;
+                            flag = false;           // Normally I would just return from the function, however for readability I instead set a flag
                         }
                         order.add(readChar);
                         break;
                     case 'h':
                         if(!unique.add(readChar)){
+                            System.setOut(consoleStream);
                             System.out.println("Duplicate order parameters. Cannot process");
                             flag = false;
                         }
@@ -365,6 +336,7 @@ public class ComVegasInterviewPackageMaker {
                         break;
                     case 's':
                         if(!unique.add(readChar)){
+                            System.setOut(consoleStream);
                             System.out.println("Duplicate order parameters. Cannot process");
                             flag = false;
                         }
@@ -372,7 +344,8 @@ public class ComVegasInterviewPackageMaker {
                         order.add(readChar);
                         break;
                     case 't':
-                        if(!unique.add(readChar)){  // Normally I would just return from the function, however for readability I instead set a flag
+                        if(!unique.add(readChar)){
+                            System.setOut(consoleStream);
                             System.out.println("Duplicate order parameters. Cannot process");
                             flag = false;
                         }
@@ -380,8 +353,7 @@ public class ComVegasInterviewPackageMaker {
                         order.add(readChar);
                         break;
                     default:
-                        flag = false;
-                        break;
+                        return false;
                 
                 }
             
@@ -391,74 +363,4 @@ public class ComVegasInterviewPackageMaker {
         return flag;
     }
 
-    // Because we are sorting by priority, this makes the problem more difficult
-    // This function takes care of it all
-    private static void orderGrpCol(char groupOperator, char sortCol) {
-        
-        ArrayList<Number[]> sortList = new ArrayList<>();
-        int packageIndex,groupOpIndex = 0, sortColIndex = 0, offset, listIndex;
-        
-        MergeSort sort = new MergeSort();
-        
-        double currentPrice;
-        
-        switch(groupOperator){
-            case 'p':
-                groupOpIndex = 0; // package price
-                break;
-            case 'h':
-                groupOpIndex = 2; // hotel price
-                break;
-            case 's':
-                groupOpIndex = 4; // show price
-                break;
-            case 't':
-                groupOpIndex = 6; // tour price
-                break;
-        
-        }
-        
-        switch(sortCol){
-            case 'p':
-                sortColIndex = 0; // package price
-                break;
-            case 'h':
-                sortColIndex = 2; // hotel price
-                break;
-            case 's':
-                sortColIndex = 4; // show price
-                break;
-            case 't':
-                sortColIndex = 6; // tour price
-                break;
-        
-        }
-        
-        currentPrice = (double)Packages.get(0)[groupOpIndex];
-        // This for loop allows us to sort by group
-        for(packageIndex = 0;  packageIndex < Packages.size(); packageIndex ++){
-            // Since I'm using double percision, I would like to approximate the difference to get
-            // the same answer as lasvegas.com
-            if(Math.abs(currentPrice - (double)Packages.get(packageIndex)[groupOpIndex])<.001){
-                sortList.add(Packages.get(packageIndex));
-            } else {
-                sortList = sort.sort(sortList, sortColIndex);
-                offset = packageIndex - sortList.size();
-                for(listIndex = 0; listIndex < sortList.size(); listIndex++){
-                    Packages.set(listIndex + offset,sortList.get(listIndex));
-                }
-                sortList.clear();
-                currentPrice = (double)Packages.get(packageIndex)[groupOpIndex];
-                sortList.add(Packages.get(packageIndex));
-            }
-        }
-        
-        if(sortList.size()>0){ // Lets not forget about sorting the last group
-            sortList = sort.sort(sortList, sortColIndex);
-            offset = packageIndex - sortList.size();
-            for(listIndex = 0; listIndex < sortList.size(); listIndex++){
-                Packages.set(listIndex + offset,sortList.get(listIndex));
-            }
-        }
-    }
 }
